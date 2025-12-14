@@ -1,11 +1,16 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
 
 local HIGHLIGHT_COLOR = Color3.new(0, 1, 0) -- Green
 local OUTLINE_COLOR = Color3.new(1, 0, 0) -- Red
 
 local espEnabled = true -- Toggle ESP on/off
 
+-- Cleanup function to remove existing ESP
 local function cleanup(character)
     for _, child in pairs(character:GetChildren()) do
         if child.Name == "PlayerESP" or child.Name == "NameESP" then
@@ -14,6 +19,7 @@ local function cleanup(character)
     end
 end
 
+-- Apply ESP to a specific player's character
 local function applyESP(player, character)
     if not character or not player then return end
     if player == LocalPlayer then return end
@@ -65,19 +71,37 @@ local function applyESP(player, character)
     end
 end
 
-local function toggleESP(enabled)
-    espEnabled = enabled
-    -- Optional: add a way to turn off ESP
+-- Remove ESP from character
+local function removeESP(character)
+    for _, child in pairs(character:GetChildren()) do
+        if child.Name == "PlayerESP" or child.Name == "NameESP" then
+            child:Destroy()
+        end
+    end
 end
 
+-- Toggle ESP
+local function toggleESP(enabled)
+    espEnabled = enabled
+    -- Remove existing ESP if toggling off
+    if not espEnabled then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player.Character then
+                removeESP(player.Character)
+            end
+        end
+    end
+end
+
+-- Setup ESP for a player
 local function setupPlayer(player)
     if not player.Character then return end
     applyESP(player, player.Character)
 end
 
+-- When a player joins
 local function onPlayerAdded(player)
     player.CharacterAdded:Connect(function(character)
-        -- Wait for character to load
         local success, err = pcall(function()
             setupPlayer(player)
         end)
@@ -85,7 +109,6 @@ local function onPlayerAdded(player)
             warn("Error applying ESP to " .. player.Name .. ": " .. err)
         end
     end)
-    -- If character already exists
     if player.Character then
         setupPlayer(player)
     end
@@ -98,26 +121,73 @@ for _, player in pairs(Players:GetPlayers()) do
     end
 end
 
--- Listen for new players joining
+-- Listen for new players
 Players.PlayerAdded:Connect(onPlayerAdded)
 
--- Optional: toggle ESP with a key
--- Example: press E to toggle
-game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+-- Optional toggle with key (E)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.E then
-        espEnabled = not espEnabled
+        toggleESP(not espEnabled)
         print("ESP toggled: " .. tostring(espEnabled))
-        -- Remove existing ESP if toggling off
-        if not espEnabled then
-            for _, player in pairs(Players:GetPlayers()) do
-                if player.Character then
-                    cleanup(player.Character)
-                end
-            end
-        end
     end
 end)
 
--- Print confirmation that script is running
+-- Search and teleport UI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "TeleportGui"
+ScreenGui.Parent = game.CoreGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 300, 0, 100)
+Frame.Position = UDim2.new(0, 20, 0, 20)
+Frame.BackgroundColor3 = Color3.new(0, 0, 0)
+Frame.Parent = ScreenGui
+
+local TextBox = Instance.new("TextBox")
+TextBox.Size = UDim2.new(0, 180, 0, 30)
+TextBox.Position = UDim2.new(0, 10, 0, 10)
+TextBox.PlaceholderText = "Enter Player Name"
+TextBox.Parent = Frame
+
+local Button = Instance.new("TextButton")
+Button.Size = UDim2.new(0, 100, 0, 30)
+Button.Position = UDim2.new(0, 190, 0, 10)
+Button.Text = "Teleport"
+Button.Parent = Frame
+
+local function teleportToPlayer()
+    local name = TextBox.Text
+    if name == "" then
+        warn("Please enter a player name.")
+        return
+    end
+    local targetPlayer = nil
+    for _, player in pairs(Players:GetPlayers()) do
+        if string.lower(player.Name) == string.lower(name) then
+            targetPlayer = player
+            break
+        end
+    end
+    if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = targetPlayer.Character.HumanoidRootPart
+        local localCharacter = LocalPlayer.Character
+        if localCharacter and localCharacter:FindFirstChild("HumanoidRootPart") then
+            local hrpLocal = localCharacter.HumanoidRootPart
+            hrpLocal.CFrame = hrp.CFrame + Vector3.new(0, 5, 0)
+        end
+    else
+        warn("Player not found or not loaded.")
+    end
+end
+
+Button.MouseButton1Click:Connect(teleportToPlayer)
+
+-- Apply ESP to existing players
+for _, player in pairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        onPlayerAdded(player)
+    end
+end
+
 print("Hi, it is working")
