@@ -129,7 +129,7 @@ ScreenGui.Parent = game:GetService("CoreGui")
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Name = "UIToggleButton"
 ToggleButton.Size = UDim2.new(0, 100, 0, 35)
-ToggleButton.Position = UDim2.new(0.5, -50, 0.5, -135) -- Positioned independently of the main frame
+ToggleButton.Position = UDim2.new(0.5, -50, 0.5, -135) 
 ToggleButton.Text = "Close"
 ToggleButton.Parent = ScreenGui
 
@@ -207,35 +207,37 @@ RightHandle.ZIndex = 2
 RightHandle.Parent = MainFrame
 
 
--- Dragging variables (for movement)
+-- Dragging variables (Shared for MainFrame and ToggleButton)
 local dragging = false
+local draggedObject = nil -- New variable to track which object is being dragged
 local dragStart = nil
 local startPos = nil
-
--- Resizing variables
 local resizing = false
 local resizeHandle = nil
 local resizeStart = nil
 local startSize = nil
 
--- Function to start moving the frame
-local function startDrag(input)
+-- Function to start dragging an object
+local function startDrag(object, input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
+        draggedObject = object
         dragStart = input.Position
-        startPos = MainFrame.Position
+        startPos = object.Position
     end
 end
 
 local function stopDrag()
     dragging = false
+    draggedObject = nil
     resizing = false 
+    resizeHandle = nil
 end
 
 local function doDrag(input)
-    if dragging then
+    if dragging and draggedObject then
         local delta = input.Position - dragStart
-        MainFrame.Position = startPos + UDim2.new(0, delta.X, 0, delta.Y)
+        draggedObject.Position = startPos + UDim2.new(0, delta.X, 0, delta.Y)
     end
 end
 
@@ -262,27 +264,23 @@ local function doResize(input)
         local currentPosY = startPos.Y.Offset
 
         if resizeHandle == "TopHandle" then
-            -- Resize Y (moves position up)
             local newSizeY = currentSizeY - delta.Y
             if newSizeY >= MIN_SIZE.Y then
                 MainFrame.Size = UDim2.new(0, currentSizeX, 0, newSizeY)
                 MainFrame.Position = UDim2.new(0.5, currentPosX, 0.5, currentPosY + delta.Y)
             end
         elseif resizeHandle == "BottomHandle" then
-            -- Resize Y (only size changes)
             local newSizeY = currentSizeY + delta.Y
             if newSizeY >= MIN_SIZE.Y then
                 MainFrame.Size = UDim2.new(0, currentSizeX, 0, newSizeY)
             end
         elseif resizeHandle == "LeftHandle" then
-            -- Resize X (moves position left)
             local newSizeX = currentSizeX - delta.X
             if newSizeX >= MIN_SIZE.X then
                 MainFrame.Size = UDim2.new(0, newSizeX, 0, currentSizeY)
                 MainFrame.Position = UDim2.new(0.5, currentPosX + delta.X, 0.5, currentPosY)
             end
         elseif resizeHandle == "RightHandle" then
-            -- Resize X (only size changes)
             local newSizeX = currentSizeX + delta.X
             if newSizeX >= MIN_SIZE.X then
                 MainFrame.Size = UDim2.new(0, newSizeX, 0, currentSizeY)
@@ -291,12 +289,22 @@ local function doResize(input)
     end
 end
 
--- Connect drag events for movement 
+-- Connect drag events for MainFrame movement (only dragging from the non-handle area moves the frame)
 MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        startDrag(input)
+    -- Check if input is a left click AND not over a resize handle
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and not resizing then
+        -- We assume the user is clicking the MainFrame to move it
+        startDrag(MainFrame, input)
     end
 end)
+
+-- Connect drag event for ToggleButton movement
+ToggleButton.InputBegan:Connect(function(input)
+    -- Click on the toggle button itself starts movement
+    startDrag(ToggleButton, input)
+end)
+
+
 UserInputService.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement then
         doDrag(input)
@@ -324,7 +332,7 @@ RightHandle.InputBegan:Connect(function(input)
 end)
 
 
--- Toggle open/close logic (Correctly hides/shows the MainFrame)
+-- Toggle open/close logic
 local isOpen = true
 ToggleButton.MouseButton1Click:Connect(function()
     isOpen = not isOpen
