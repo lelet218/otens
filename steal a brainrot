@@ -125,46 +125,77 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "TeleportUI"
 ScreenGui.Parent = game:GetService("CoreGui")
 
--- Main Frame (centered) - SIZE ADJUSTED (400 width, 200 height)
+-- Main Frame (centered)
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 400, 0, 200)
-MainFrame.Position = UDim2.new(0.5, -200, 0.5, -100) -- Re-centered due to new size
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -100)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
 MainFrame.BorderSizePixel = 2
 MainFrame.Parent = ScreenGui
 
--- Toggle Button (Open/Close) - SIZE ADJUSTED (100 width, 35 height)
+-- Toggle Button (Open/Close)
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(0, 100, 0, 35)
 ToggleButton.Position = UDim2.new(0, 10, 0, 10)
 ToggleButton.Text = "Close"
 ToggleButton.Parent = MainFrame
 
--- Search Box (White Background, SIZE ADJUSTED: 280 width, 35 height)
+-- Search Box (White Background, size 280x35)
 local TextBox = Instance.new("TextBox")
 TextBox.Size = UDim2.new(0, 280, 0, 35)
-TextBox.Position = UDim2.new(0, 10, 0, 60) -- Adjusted Y position for new button height
+TextBox.Position = UDim2.new(0, 10, 0, 60)
 TextBox.PlaceholderText = "Enter Player Name"
-TextBox.BackgroundColor3 = Color3.new(1, 1, 1) -- White background
+TextBox.BackgroundColor3 = Color3.new(1, 1, 1)
 TextBox.BackgroundTransparency = 0 
 TextBox.TextXAlignment = Enum.TextXAlignment.Left
 TextBox.BorderSizePixel = 1
 TextBox.Parent = MainFrame
 
--- Teleport Button - SIZE ADJUSTED (100 width, 35 height)
+-- Teleport Button
 local TeleportBtn = Instance.new("TextButton")
 TeleportBtn.Size = UDim2.new(0, 100, 0, 35)
-TeleportBtn.Position = UDim2.new(0, 300, 0, 60) -- Adjusted X and Y position to fit new sizes
+TeleportBtn.Position = UDim2.new(0, 300, 0, 60)
 TeleportBtn.Text = "Teleport"
 TeleportBtn.Parent = MainFrame
 
--- Dragging variables
+-- === RESIZE HANDLES ===
+
+-- Top Handle (5 pixels tall, invisible)
+local TopHandle = Instance.new("TextButton")
+TopHandle.Name = "TopHandle"
+TopHandle.Size = UDim2.new(1, 0, 0, 5) -- Full width, 5px height
+TopHandle.Position = UDim2.new(0, 0, 0, 0)
+TopHandle.BackgroundTransparency = 1
+TopHandle.Text = ""
+TopHandle.ZIndex = 2
+TopHandle.Parent = MainFrame
+
+-- Bottom Handle (5 pixels tall, invisible)
+local BottomHandle = Instance.new("TextButton")
+BottomHandle.Name = "BottomHandle"
+BottomHandle.Size = UDim2.new(1, 0, 0, 5) -- Full width, 5px height
+BottomHandle.Position = UDim2.new(0, 0, 1, -5) -- Positioned at the very bottom
+BottomHandle.BackgroundTransparency = 1
+BottomHandle.Text = ""
+BottomHandle.ZIndex = 2
+BottomHandle.Parent = MainFrame
+
+-- Dragging variables (for movement)
 local dragging = false
 local dragStart = nil
 local startPos = nil
 
--- Function to move the frame
+-- Resizing variables
+local resizing = false
+local resizeHandle = nil
+local resizeStart = nil
+local startSize = nil
+
+-- Minimum size constraint for the frame
+local MIN_SIZE_Y = 100 
+
+-- Function to start moving the frame
 local function startDrag(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
@@ -175,6 +206,7 @@ end
 
 local function stopDrag()
     dragging = false
+    resizing = false -- Stop resizing too
 end
 
 local function doDrag(input)
@@ -184,22 +216,65 @@ local function doDrag(input)
     end
 end
 
--- Connect drag events
+-- Function to start resizing the frame
+local function startResize(handle, input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        resizing = true
+        resizeHandle = handle.Name
+        resizeStart = input.Position
+        startSize = MainFrame.Size
+        startPos = MainFrame.Position
+    end
+end
+
+-- Function to perform resizing
+local function doResize(input)
+    if resizing then
+        local delta = input.Position - resizeStart
+        local newYOffset = startSize.Y.Offset + delta.Y
+        
+        if resizeHandle == "TopHandle" then
+            -- For top resizing, position moves, size changes inversely
+            local newSizeY = startSize.Y.Offset - delta.Y
+            if newSizeY >= MIN_SIZE_Y then
+                MainFrame.Size = UDim2.new(startSize.X.Scale, startSize.X.Offset, 0, newSizeY)
+                MainFrame.Position = startPos + UDim2.new(0, 0, 0, delta.Y)
+            end
+        elseif resizeHandle == "BottomHandle" then
+            -- For bottom resizing, only size changes
+            if newYOffset >= MIN_SIZE_Y then
+                MainFrame.Size = UDim2.new(startSize.X.Scale, startSize.X.Offset, 0, newYOffset)
+            end
+        end
+    end
+end
+
+-- Connect drag events for movement (using the frame itself as the drag area)
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         startDrag(input)
     end
 end)
-MainFrame.InputEnded:Connect(function(input)
+UserInputService.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        doDrag(input)
+        doResize(input) -- Check for resizing during mouse movement too
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         stopDrag()
     end
 end)
-UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        doDrag(input)
-    end
+
+-- Connect drag events for resizing
+TopHandle.InputBegan:Connect(function(input)
+    startResize(TopHandle, input)
 end)
+BottomHandle.InputBegan:Connect(function(input)
+    startResize(BottomHandle, input)
+end)
+
 
 -- Toggle open/close
 local isOpen = true
