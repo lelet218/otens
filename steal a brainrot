@@ -2,15 +2,13 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local StarterGui = game:GetService("StarterGui")
-local TweenService = game:GetService("TweenService")
 
-local HIGHLIGHT_COLOR = Color3.new(0, 1, 0) -- Green
-local OUTLINE_COLOR = Color3.new(1, 0, 0) -- Red
+local HIGHLIGHT_COLOR = Color3.new(0, 1, 0)
+local OUTLINE_COLOR = Color3.new(1, 0, 0)
 
-local espEnabled = true -- Toggle ESP on/off
+local espEnabled = true
 
--- Cleanup function to remove existing ESP
+-- Cleanup ESP
 local function cleanup(character)
     for _, child in pairs(character:GetChildren()) do
         if child.Name == "PlayerESP" or child.Name == "NameESP" then
@@ -19,14 +17,13 @@ local function cleanup(character)
     end
 end
 
--- Apply ESP to a specific player's character
+-- Apply ESP
 local function applyESP(player, character)
     if not character or not player then return end
     if player == LocalPlayer then return end
 
     cleanup(character)
 
-    -- Highlight
     local highlight = Instance.new("Highlight")
     highlight.Name = "PlayerESP"
     highlight.FillColor = HIGHLIGHT_COLOR
@@ -37,9 +34,7 @@ local function applyESP(player, character)
     highlight.Adornee = character
     highlight.Parent = character
 
-    -- Wait for the Head
     local head = nil
-    local maxRetries = 10
     local retries = 0
     repeat
         head = character:FindFirstChild("Head")
@@ -47,7 +42,7 @@ local function applyESP(player, character)
             retries = retries + 1
             task.wait(0.1)
         end
-    until head or retries >= maxRetries
+    until head or retries >= 10
 
     if head then
         local billboard = Instance.new("BillboardGui")
@@ -71,7 +66,6 @@ local function applyESP(player, character)
     end
 end
 
--- Remove ESP from character
 local function removeESP(character)
     for _, child in pairs(character:GetChildren()) do
         if child.Name == "PlayerESP" or child.Name == "NameESP" then
@@ -80,10 +74,8 @@ local function removeESP(character)
     end
 end
 
--- Toggle ESP
 local function toggleESP(enabled)
     espEnabled = enabled
-    -- Remove existing ESP if toggling off
     if not espEnabled then
         for _, player in pairs(Players:GetPlayers()) do
             if player.Character then
@@ -93,13 +85,11 @@ local function toggleESP(enabled)
     end
 end
 
--- Setup ESP for a player
 local function setupPlayer(player)
     if not player.Character then return end
     applyESP(player, player.Character)
 end
 
--- When a player joins
 local function onPlayerAdded(player)
     player.CharacterAdded:Connect(function(character)
         local success, err = pcall(function()
@@ -114,17 +104,14 @@ local function onPlayerAdded(player)
     end
 end
 
--- Connect existing players
 for _, player in pairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         onPlayerAdded(player)
     end
 end
 
--- Listen for new players
 Players.PlayerAdded:Connect(onPlayerAdded)
 
--- Optional toggle with key (E)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.E then
@@ -133,29 +120,95 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Search and teleport UI
+-- Create UI for open/close toggle and search bar
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "TeleportGui"
-ScreenGui.Parent = game.CoreGui
+ScreenGui.Name = "TeleportUI"
+ScreenGui.Parent = game:GetService("CoreGui")
 
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 300, 0, 100)
-Frame.Position = UDim2.new(0, 20, 0, 20)
-Frame.BackgroundColor3 = Color3.new(0, 0, 0)
-Frame.Parent = ScreenGui
+-- Main Frame (centered)
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 350, 0, 150)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -75)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+MainFrame.BorderSizePixel = 2
+MainFrame.Parent = ScreenGui
 
+-- Toggle Button
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0, 80, 0, 30)
+ToggleButton.Position = UDim2.new(0, 10, 0, 10)
+ToggleButton.Text = "Close"
+ToggleButton.Parent = MainFrame
+
+-- Search Box
 local TextBox = Instance.new("TextBox")
-TextBox.Size = UDim2.new(0, 180, 0, 30)
-TextBox.Position = UDim2.new(0, 10, 0, 10)
+TextBox.Size = UDim2.new(0, 220, 0, 30)
+TextBox.Position = UDim2.new(0, 10, 0, 50)
 TextBox.PlaceholderText = "Enter Player Name"
-TextBox.Parent = Frame
+TextBox.Parent = MainFrame
 
-local Button = Instance.new("TextButton")
-Button.Size = UDim2.new(0, 100, 0, 30)
-Button.Position = UDim2.new(0, 190, 0, 10)
-Button.Text = "Teleport"
-Button.Parent = Frame
+-- Teleport Button
+local TeleportBtn = Instance.new("TextButton")
+TeleportBtn.Size = UDim2.new(0, 80, 0, 30)
+TeleportBtn.Position = UDim2.new(0, 240, 0, 50)
+TeleportBtn.Text = "Teleport"
+TeleportBtn.Parent = MainFrame
 
+-- Dragging variables
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+-- Function to move the frame
+local function startDrag(input)
+    dragging = true
+    dragStart = input.Position
+    startPos = MainFrame.Position
+end
+
+local function stopDrag()
+    dragging = false
+end
+
+local function doDrag(input)
+    if dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = startPos + UDim2.new(0, delta.X, 0, delta.Y)
+    end
+end
+
+-- Connect drag events
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        startDrag(input)
+    end
+end)
+MainFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        stopDrag()
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        doDrag(input)
+    end
+end)
+
+-- Toggle visibility
+local isOpen = true
+ToggleButton.MouseButton1Click:Connect(function()
+    isOpen = not isOpen
+    if isOpen then
+        MainFrame.Visible = true
+        ToggleButton.Text = "Close"
+    else
+        MainFrame.Visible = false
+        ToggleButton.Text = "Open"
+    end
+end)
+
+-- Teleport function
 local function teleportToPlayer()
     local name = TextBox.Text
     if name == "" then
@@ -171,23 +224,16 @@ local function teleportToPlayer()
     end
     if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local hrp = targetPlayer.Character.HumanoidRootPart
-        local localCharacter = LocalPlayer.Character
-        if localCharacter and localCharacter:FindFirstChild("HumanoidRootPart") then
-            local hrpLocal = localCharacter.HumanoidRootPart
-            hrpLocal.CFrame = hrp.CFrame + Vector3.new(0, 5, 0)
+        local localChar = LocalPlayer.Character
+        if localChar and localChar:FindFirstChild("HumanoidRootPart") then
+            local localHRP = localChar.HumanoidRootPart
+            localHRP.CFrame = hrp.CFrame + Vector3.new(0, 5, 0)
         end
     else
         warn("Player not found or not loaded.")
     end
 end
 
-Button.MouseButton1Click:Connect(teleportToPlayer)
-
--- Apply ESP to existing players
-for _, player in pairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        onPlayerAdded(player)
-    end
-end
+TeleportBtn.MouseButton1Click:Connect(teleportToPlayer)
 
 print("Hi, it is working")
