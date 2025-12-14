@@ -125,16 +125,16 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "TeleportUI"
 ScreenGui.Parent = game:GetService("CoreGui")
 
--- Toggle Button (Open/Close) - MOVED TO SCREEN GUI
+-- Toggle Button (Open/Close) - PARENTED TO SCREEN GUI
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Name = "UIToggleButton"
 ToggleButton.Size = UDim2.new(0, 100, 0, 35)
-ToggleButton.Position = UDim2.new(0.5, -50, 0.5, -135) -- Set initial position above the frame center
+ToggleButton.Position = UDim2.new(0.5, -50, 0.5, -135) -- Positioned independently of the main frame
 ToggleButton.Text = "Close"
 ToggleButton.Parent = ScreenGui
 
 
--- Main Frame (centered)
+-- Main Frame (The black block, centered)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainTeleportFrame"
 MainFrame.Size = UDim2.new(0, 400, 0, 200)
@@ -147,7 +147,7 @@ MainFrame.Parent = ScreenGui
 -- Search Box (White Background)
 local TextBox = Instance.new("TextBox")
 TextBox.Size = UDim2.new(0, 280, 0, 35)
-TextBox.Position = UDim2.new(0, 10, 0, 10) -- Moved up since ToggleButton is gone
+TextBox.Position = UDim2.new(0, 10, 0, 10) 
 TextBox.PlaceholderText = "Enter Player Name"
 TextBox.BackgroundColor3 = Color3.new(1, 1, 1) 
 TextBox.BackgroundTransparency = 0 
@@ -158,7 +158,7 @@ TextBox.Parent = MainFrame
 -- Teleport Button
 local TeleportBtn = Instance.new("TextButton")
 TeleportBtn.Size = UDim2.new(0, 100, 0, 35)
-TeleportBtn.Position = UDim2.new(0, 300, 0, 10) -- Moved up since ToggleButton is gone
+TeleportBtn.Position = UDim2.new(0, 300, 0, 10) 
 TeleportBtn.Text = "Teleport"
 TeleportBtn.Parent = MainFrame
 
@@ -324,7 +324,7 @@ RightHandle.InputBegan:Connect(function(input)
 end)
 
 
--- Toggle open/close logic (Now controls MainFrame visibility)
+-- Toggle open/close logic (Correctly hides/shows the MainFrame)
 local isOpen = true
 ToggleButton.MouseButton1Click:Connect(function()
     isOpen = not isOpen
