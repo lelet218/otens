@@ -3,8 +3,8 @@ local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
-local HIGHLIGHT_COLOR = Color3.new(0, 1, 0) -- Green for ESP fill
-local OUTLINE_COLOR = Color3.new(1, 0, 0) -- Red for ESP outline
+local HIGHLIGHT_COLOR = Color3.new(0, 1, 0) 
+local OUTLINE_COLOR = Color3.new(1, 0, 0) 
 
 local espEnabled = true
 
@@ -125,8 +125,18 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "TeleportUI"
 ScreenGui.Parent = game:GetService("CoreGui")
 
+-- Toggle Button (Open/Close) - MOVED TO SCREEN GUI
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "UIToggleButton"
+ToggleButton.Size = UDim2.new(0, 100, 0, 35)
+ToggleButton.Position = UDim2.new(0.5, -50, 0.5, -135) -- Set initial position above the frame center
+ToggleButton.Text = "Close"
+ToggleButton.Parent = ScreenGui
+
+
 -- Main Frame (centered)
 local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainTeleportFrame"
 MainFrame.Size = UDim2.new(0, 400, 0, 200)
 MainFrame.Position = UDim2.new(0.5, -200, 0.5, -100)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -134,17 +144,10 @@ MainFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
 MainFrame.BorderSizePixel = 2
 MainFrame.Parent = ScreenGui
 
--- Toggle Button (Open/Close)
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(0, 100, 0, 35)
-ToggleButton.Position = UDim2.new(0, 10, 0, 10)
-ToggleButton.Text = "Close"
-ToggleButton.Parent = MainFrame
-
 -- Search Box (White Background)
 local TextBox = Instance.new("TextBox")
 TextBox.Size = UDim2.new(0, 280, 0, 35)
-TextBox.Position = UDim2.new(0, 10, 0, 60)
+TextBox.Position = UDim2.new(0, 10, 0, 10) -- Moved up since ToggleButton is gone
 TextBox.PlaceholderText = "Enter Player Name"
 TextBox.BackgroundColor3 = Color3.new(1, 1, 1) 
 TextBox.BackgroundTransparency = 0 
@@ -155,7 +158,7 @@ TextBox.Parent = MainFrame
 -- Teleport Button
 local TeleportBtn = Instance.new("TextButton")
 TeleportBtn.Size = UDim2.new(0, 100, 0, 35)
-TeleportBtn.Position = UDim2.new(0, 300, 0, 60)
+TeleportBtn.Position = UDim2.new(0, 300, 0, 10) -- Moved up since ToggleButton is gone
 TeleportBtn.Text = "Teleport"
 TeleportBtn.Parent = MainFrame
 
@@ -297,7 +300,7 @@ end)
 UserInputService.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement then
         doDrag(input)
-        doResize(input) -- Check for resizing during mouse movement
+        doResize(input) 
     end
 end)
 UserInputService.InputEnded:Connect(function(input)
@@ -321,19 +324,15 @@ RightHandle.InputBegan:Connect(function(input)
 end)
 
 
--- Toggle open/close
+-- Toggle open/close logic (Now controls MainFrame visibility)
 local isOpen = true
 ToggleButton.MouseButton1Click:Connect(function()
     isOpen = not isOpen
     if isOpen then
         MainFrame.Visible = true
-        TextBox.Visible = true
-        TeleportBtn.Visible = true
         ToggleButton.Text = "Close"
     else
-        -- When closed, hide search bar and teleport button, keep main frame visible if you want
-        TextBox.Visible = false
-        TeleportBtn.Visible = false
+        MainFrame.Visible = false
         ToggleButton.Text = "Open"
     end
 end)
