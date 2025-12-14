@@ -1,3 +1,5 @@
+-- Place this script inside StarterPlayer > StarterPlayerScripts > LocalScript
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
@@ -82,6 +84,13 @@ local function toggleESP(enabled)
                 removeESP(player.Character)
             end
         end
+    else
+        -- Re-apply ESP to current players
+        for _, player in pairs(Players:GetPlayers()) do
+            if player.Character then
+                applyESP(player, player.Character)
+            end
+        end
     end
 end
 
@@ -104,14 +113,16 @@ local function onPlayerAdded(player)
     end
 end
 
+-- Initialize ESP for existing players
 for _, player in pairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         onPlayerAdded(player)
     end
 end
-
+-- Listen for new players
 Players.PlayerAdded:Connect(onPlayerAdded)
 
+-- Toggle ESP with E key
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.E then
@@ -125,7 +136,7 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "TeleportUI"
 ScreenGui.Parent = game:GetService("CoreGui")
 
--- Main Frame (centered)
+-- Main Frame
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 350, 0, 150)
 MainFrame.Position = UDim2.new(0.5, -175, 0.5, -75)
@@ -160,7 +171,6 @@ local dragging = false
 local dragStart = nil
 local startPos = nil
 
--- Function to move the frame
 local function startDrag(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
@@ -180,7 +190,6 @@ local function doDrag(input)
     end
 end
 
--- Connect drag events
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         startDrag(input)
@@ -197,27 +206,11 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Toggle open/close
+-- Open/Close toggle
 local isOpen = true
-ToggleButton.MouseButton1Click: function()
+ToggleButton.MouseButton1Click = function()
     isOpen = not isOpen
     if isOpen then
-        MainFrame.Visible = true
-        ToggleButton.Text = "Close"
-    else
-        MainFrame.Visible = true -- Keep visible but hide the search bar
-        -- Instead, we can hide the TextBox and Teleport Button
-        TextBox.Visible = false
-        TeleportBtn.Visible = false
-        ToggleButton.Text = "Open"
-    end
-end
-
--- When clicking again to open, show the search bar
-ToggleButton.MouseButton1Click:Connect(function()
-    isOpen = not isOpen
-    if isOpen then
-        MainFrame.Visible = true
         TextBox.Visible = true
         TeleportBtn.Visible = true
         ToggleButton.Text = "Close"
@@ -226,7 +219,7 @@ ToggleButton.MouseButton1Click:Connect(function()
         TeleportBtn.Visible = false
         ToggleButton.Text = "Open"
     end
-end)
+end
 
 -- Teleport function
 local function teleportToPlayer()
@@ -254,6 +247,6 @@ local function teleportToPlayer()
     end
 end
 
-TeleportBtn.MouseButton1Click:Connect(teleportToPlayer)
+TeleportBtn.MouseButton1Click = teleportToPlayer
 
-print("Hi, it is working")
+print("Script loaded successfully.")
