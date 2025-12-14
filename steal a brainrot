@@ -134,7 +134,7 @@ MainFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
 MainFrame.BorderSizePixel = 2
 MainFrame.Parent = ScreenGui
 
--- Toggle Button
+-- Toggle Button (Open/Close)
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(0, 80, 0, 30)
 ToggleButton.Position = UDim2.new(0, 10, 0, 10)
@@ -162,9 +162,11 @@ local startPos = nil
 
 -- Function to move the frame
 local function startDrag(input)
-    dragging = true
-    dragStart = input.Position
-    startPos = MainFrame.Position
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+    end
 end
 
 local function stopDrag()
@@ -195,15 +197,33 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Toggle visibility
+-- Toggle open/close
 local isOpen = true
-ToggleButton.MouseButton1Click:Connect(function()
+ToggleButton.MouseButton1Click: function()
     isOpen = not isOpen
     if isOpen then
         MainFrame.Visible = true
         ToggleButton.Text = "Close"
     else
-        MainFrame.Visible = false
+        MainFrame.Visible = true -- Keep visible but hide the search bar
+        -- Instead, we can hide the TextBox and Teleport Button
+        TextBox.Visible = false
+        TeleportBtn.Visible = false
+        ToggleButton.Text = "Open"
+    end
+end
+
+-- When clicking again to open, show the search bar
+ToggleButton.MouseButton1Click:Connect(function()
+    isOpen = not isOpen
+    if isOpen then
+        MainFrame.Visible = true
+        TextBox.Visible = true
+        TeleportBtn.Visible = true
+        ToggleButton.Text = "Close"
+    else
+        TextBox.Visible = false
+        TeleportBtn.Visible = false
         ToggleButton.Text = "Open"
     end
 end)
